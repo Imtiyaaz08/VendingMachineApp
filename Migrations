@@ -1,0 +1,49 @@
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using VendingMachine.API.Models;
+using VendingMachine.API.Services;
+
+namespace VendingMachine.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ReportController : ControllerBase
+    {
+        private readonly ReportService _reportService;
+
+        public ReportController(ReportService reportService)
+        {
+            _reportService = reportService;
+        }
+
+        [HttpGet("generate")]
+        public async Task<IActionResult> GenerateReport(DateTime fromDate, DateTime toDate, string itemName = null)
+        {
+            var reportData = await _reportService.GetReportData(fromDate, toDate, itemName);
+            if (reportData == null || !reportData.Any())
+            {
+                return NotFound("No data found for the specified date range.");
+            }
+
+            return Ok(reportData);
+        }
+
+        [HttpGet("download")]
+        public async Task<IActionResult> DownloadReport(DateTime fromDate, DateTime toDate, string itemName = null, string format = "pdf")
+        {
+            var reportData = await _reportService.GetReportData(fromDate, toDate, itemName);
+            if (reportData == null || !reportData.Any())
+            {
+                return NotFound("No data found for the specified date range.");
+            }
+
+            var fileContent = await _reportService.GenerateReportFile(reportData, format);
+            var fileName = $"Report_{fromDate:yyyyMMdd}_{toDate:yyyyMMdd}.{format}";
+
+            return File(fileContent, "application/octet-stream", fileName);
+        }
+    }
+}
